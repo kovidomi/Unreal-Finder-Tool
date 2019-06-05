@@ -1,0 +1,56 @@
+{
+  "engine version": "0.0.0",
+  "structs": [
+    {
+      "name": "FNameEntity",
+      "super": "",
+      "vars": [
+        { "Index": "int" },
+        { "AnsiName": "string" }
+      ],
+      "note": "That's for GNames"
+    },
+    {
+      "name": "FName",
+      "super": "",
+      "vars": [
+        { "Index": "int" },
+        { "Number": "int" }
+      ],
+      "note": "That's for GObjects"
+    },
+    {
+      "name": "FUObjectItem",
+      "super": "",
+      "vars": [
+        { "Object": "UObject*" },
+        { "Flags": "int" },
+        { "ClusterIndex": "int" },
+        { "SerialNumber": "int" },
+        { "Unknown_00": "4" }
+      ],
+      "note": ""
+    },
+    {
+      "name": "UObject",
+      "super": "",
+      "vars": [
+        { "VfTable": "FPointer" },
+        { "Flags": "int" },
+        { "InternalIndex": "int" },
+        { "Class": "UClass*" },
+        { "Name": "FName" },
+        { "Outer": "UObject*" }
+      ],
+      "note": ""
+    },
+    {
+      "name": "FPointer",
+      "super": "",
+      "vars": [
+        { "Dummy": "*" }
+      ],
+      "note": "* mean it's pointer"
+    }
+  ]
+}

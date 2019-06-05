@@ -26,17 +26,17 @@ public:
 	// Read struct form loaded json structs
 	static bool ReadStruct(const std::string& structName, JsonStruct& destStruct, bool alloc = true);
 	// Load all json structs inside `StructsList`
-	static bool Load(void* jsonObj);
+	static bool Load(void* jsonObj, bool overrideOld = false);
 	// Load all json structs inside `StructsList`, [Using main `JsonObj`]
-	static bool Load();
+	static bool Load(bool overrideOld = false);
 	// Read Json file into memory AND read all structs inside json file, then store structs inside `StructsList`
-	static bool ReadAndLoadFile(const std::string& fileName, void* jsonObj);
+	static bool ReadAndLoadFile(const std::string& fileName, void* jsonObj, bool overrideOld = false);
 	// Read Json file into memory AND read all structs inside json file, then store structs inside `StructsList`, [Using main `JsonObj`]
-	static bool ReadAndLoadFile(const std::string& fileName);
+	static bool ReadAndLoadFile(const std::string& fileName, bool overrideOld = false);
 	// Load json struct by name
-	static bool LoadStruct(const std::string& structName);
+	static bool LoadStruct(const std::string& structName, bool overrideOld = false);
 	// Get json struct variable size
-	static int VarSizeFromJson(const std::string& typeName);
+	static int VarSizeFromJson(const std::string& typeName, bool overrideOld);
 };
 
 class JsonVar
@@ -49,16 +49,16 @@ public:
 	// Variable Type
 	std::string Type;
 	// Variable Size
-	size_t Size;
+	int Size;
 	// Variable offset of his parent
-	size_t Offset;
+	int Offset;
 	// Variable is struct
 	bool IsStruct;
 	// If this variable is struct this is pointer to struct contains variables
 	JsonStruct* Struct;
 
 	JsonVar();
-	JsonVar(const std::string& name, const std::string& type, size_t offset, bool isStruct);
+	JsonVar(const std::string& name, const std::string& type, int offset, bool isStruct);
 	~JsonVar();
 	// Access variable inside this variable, ONLY work if this variable is struct
 	JsonVar& operator[](const std::string& varName);

@@ -6,9 +6,7 @@
 JsonStructs JsonReflector::StructsList;
 nlohmann::json JsonReflector::JsonObj;
 
-// -------------------------------------------------
-// JsonReflector
-// -------------------------------------------------
+#pragma region JsonReflector
 bool JsonReflector::ReadJsonFile(const std::string& fileName, void* jsonObj)
 {
 	// read a JSON file
@@ -52,11 +50,11 @@ bool JsonReflector::ReadStruct(const std::string& structName, JsonStruct& destSt
 	return false;
 }
 
-bool JsonReflector::LoadStruct(const std::string& structName)
+bool JsonReflector::LoadStruct(const std::string& structName, const bool overrideOld)
 {
 	// Check is already here
-	if (StructsList.find(structName) != StructsList.end()) return true;
-	auto j = JsonObj;
+	if (StructsList.find(structName) != StructsList.end() && !overrideOld) return true;
+	auto j = JsonObj; // Don't make it reference var
 
 	for (const auto& parent : j.at("structs").items())
 	{
@@ -66,7 +64,7 @@ bool JsonReflector::LoadStruct(const std::string& structName)
 			JsonStruct tempToSave;
 			JsonVariables vars;
 			int structSize = 0;
-			size_t offset = 0;
+			int offset = 0;
 
 			// Get Super
 			const std::string eSuper = parent.value().at("super");
@@ -74,8 +72,8 @@ bool JsonReflector::LoadStruct(const std::string& structName)
 			{
 				tempToSave.StructSuper = eSuper;
 
-				// Add Variables to struct first
-				if (LoadStruct(eSuper))
+				// Add super struct Variables to struct first
+				if (LoadStruct(eSuper, overrideOld))
 				{
 					auto s = StructsList.find(eSuper);
 					if (s != StructsList.end())
@@ -111,7 +109,7 @@ bool JsonReflector::LoadStruct(const std::string& structName)
 				if (it.value().is_number_unsigned())
 					structSize += static_cast<int>(var.value());
 				else
-					structSize += VarSizeFromJson(it.value());
+					structSize += VarSizeFromJson(it.value(), overrideOld);
 
 				const std::string& name = it.key();
 				std::string type = it.value();
@@ -129,17 +127,33 @@ bool JsonReflector::LoadStruct(const std::string& structName)
 			tempToSave.StructSize = structSize;
 
 			// [Copy] the struct to structs list
-			if (StructsList.find(eName) == StructsList.end())
-				StructsList.push_back({ eName , tempToSave });
+			{
+				// Override old struct
+				if (overrideOld)
+				{
+					// check if it in the list
+					auto foundIt = StructsList.find(eName);
+					if (foundIt != StructsList.end())
+					{
+						*foundIt = { eName, tempToSave };
+					}
+				}
+
+				// check if it not in the list
+				if (StructsList.find(eName) == StructsList.end())
+					StructsList.push_back({ eName, tempToSave });
+			}
 
 			return true;
 		}
 	}
 
-	return false;
+	// if code hit here then there is no override in the `override engine` file
+	// so by return true i just give it the struct from `EngineBase` file, because it already loaded !!
+	return overrideOld;
 }
 
-bool JsonReflector::Load(void* jsonObj)
+bool JsonReflector::Load(void* jsonObj, const bool overrideOld)
 {
 	auto jObj = reinterpret_cast<nlohmann::json*>(jsonObj);
 	auto j = *jObj;
@@ -148,12 +162,12 @@ bool JsonReflector::Load(void* jsonObj)
 	{
 		const std::string eName = parent.value().at("name");
 		// Check is already here
-		if (StructsList.find(eName) != StructsList.end()) continue;
+		if (StructsList.find(eName) != StructsList.end() && !overrideOld) continue;
 
 		JsonStruct tempToSave;
 		JsonVariables vars;
 		int structSize = 0;
-		size_t offset = 0;
+		int offset = 0;
 
 		// Get Super
 		const std::string eSuper = parent.value().at("super");
@@ -161,8 +175,8 @@ bool JsonReflector::Load(void* jsonObj)
 		{
 			tempToSave.StructSuper = eSuper;
 
-			// Add Variables to struct first
-			if (LoadStruct(eSuper))
+			// Add super struct Variables to struct first
+			if (LoadStruct(eSuper, overrideOld))
 			{
 				auto s = StructsList.find(eSuper);
 				if (s != StructsList.end())
@@ -198,7 +212,7 @@ bool JsonReflector::Load(void* jsonObj)
 			if (it.value().is_number_unsigned())
 				structSize += static_cast<int>(var.value());
 			else
-				structSize += VarSizeFromJson(it.value()); // VarSizeFromJson Load other struct if not loaded
+				structSize += VarSizeFromJson(it.value(), overrideOld); // VarSizeFromJson Load other struct if not loaded
 
 			const std::string& name = it.key();
 			std::string type = it.value();
@@ -215,29 +229,42 @@ bool JsonReflector::Load(void* jsonObj)
 		tempToSave.StructSize = structSize;
 
 		// [Copy] the struct to structs list
-		if (StructsList.find(eName) == StructsList.end())
-			StructsList.push_back({ eName , tempToSave });
+		{
+			// Override old struct
+			if (overrideOld)
+			{
+				// check if it in the list
+				auto foundIt = StructsList.find(eName);
+				if (foundIt != StructsList.end())
+				{
+					*foundIt = { eName, tempToSave };
+				}
+			}
 
+			// check if it not in the list
+			if (StructsList.find(eName) == StructsList.end())
+				StructsList.push_back({ eName, tempToSave });
+		}
 	}
 	return true;
 }
 
-bool JsonReflector::Load()
+bool JsonReflector::Load(const bool overrideOld)
 {
-	return Load(&JsonObj);
+	return Load(&JsonObj, overrideOld);
 }
 
-bool JsonReflector::ReadAndLoadFile(const std::string& fileName, void* jsonObj)
+bool JsonReflector::ReadAndLoadFile(const std::string& fileName, void* jsonObj, const bool overrideOld)
 {
-	return ReadJsonFile(fileName, jsonObj) && Load(jsonObj);
+	return ReadJsonFile(fileName, jsonObj) && Load(jsonObj, overrideOld);
 }
 
-bool JsonReflector::ReadAndLoadFile(const std::string& fileName)
+bool JsonReflector::ReadAndLoadFile(const std::string& fileName, const bool overrideOld)
 {
-	return ReadAndLoadFile(fileName, reinterpret_cast<void*>(&JsonObj));
+	return ReadAndLoadFile(fileName, reinterpret_cast<void*>(&JsonObj), overrideOld);
 }
 
-int JsonReflector::VarSizeFromJson(const std::string& typeName)
+int JsonReflector::VarSizeFromJson(const std::string& typeName, const bool overrideOld)
 {
 	if (typeName == "int8")
 		return sizeof(int8_t);
@@ -257,7 +284,7 @@ int JsonReflector::VarSizeFromJson(const std::string& typeName)
 	if (typeName == "uint64")
 		return sizeof(uint64_t);
 
-	if (typeName == "pointer")
+	if (Utils::EndsWith(typeName, "*")) // pointer
 		return sizeof(uintptr_t);
 	if (typeName == "DWORD")
 		return sizeof(DWORD);
@@ -272,7 +299,7 @@ int JsonReflector::VarSizeFromJson(const std::string& typeName)
 
 	if (IsStructType(typeName))
 	{
-		if (LoadStruct(typeName))
+		if (LoadStruct(typeName, overrideOld))
 		{
 			auto s = StructsList.find(typeName);
 			if (s != StructsList.end())
@@ -298,7 +325,7 @@ bool JsonReflector::IsStructType(const std::string& typeName)
 		typeName == "uint32" ||
 		typeName == "uint64" ||
 
-		typeName == "pointer" ||
+		Utils::EndsWith(typeName, "*") || // pointer
 		typeName == "DWORD" ||
 		typeName == "DWORD64" ||
 		typeName == "string" ||
@@ -306,10 +333,9 @@ bool JsonReflector::IsStructType(const std::string& typeName)
 		Utils::IsNumber(typeName);
 	return !isStruct;
 }
+#pragma endregion
 
-// -------------------------------------------------
-// JsonStruct
-// -------------------------------------------------
+#pragma region JsonStruct
 JsonStruct::JsonStruct() = default;
 
 JsonStruct::~JsonStruct()
@@ -336,7 +362,7 @@ int JsonStruct::SubUnNeededSize()
 		// if it's 32bit game (4byte pointer) sub 4byte for every pointer
 		for (auto& var : Vars)
 		{
-			if (var.second.Type == "pointer")
+			if (Utils::EndsWith(var.second.Type, "*"))
 				sSub += 0x4;
 			else if (var.second.IsStruct)
 			{
@@ -403,10 +429,9 @@ void JsonStruct::FixStructData()
 void JsonStruct::InitData()
 {
 }
+#pragma endregion
 
-// -------------------------------------------------
-// JsonVar
-// -------------------------------------------------
+#pragma region JsonVar
 JsonVar::JsonVar() : parent(nullptr), Size(0), Offset(0), IsStruct(false), Struct(nullptr)
 {
 	// Solve unresolved problem
@@ -435,11 +460,11 @@ JsonVar::JsonVar() : parent(nullptr), Size(0), Offset(0), IsStruct(false), Struc
 	ReadAs<uintptr_t>();
 }
 
-JsonVar::JsonVar(const std::string& name, const std::string& type, const size_t offset, const bool isStruct) : parent(nullptr), Struct(nullptr)
+JsonVar::JsonVar(const std::string& name, const std::string& type, const int offset, const bool isStruct) : parent(nullptr), Struct(nullptr)
 {
 	Name = name;
 	Type = type;
-	Size = JsonReflector::VarSizeFromJson(Type);
+	Size = JsonReflector::VarSizeFromJson(Type, false);
 	Offset = offset;
 	IsStruct = isStruct;
 }
@@ -514,7 +539,7 @@ JsonStruct* JsonVar::ReadAsStruct()
 
 JsonStruct* JsonVar::ReadAsPStruct(const string& ptrType)
 {
-	if (Type != "pointer")
+	if (!Utils::EndsWith(Type, "*"))
 		throw std::exception((Type + " Not a pointer.!").c_str());
 
 	if (Struct != nullptr)
@@ -542,3 +567,4 @@ JsonStruct* JsonVar::ReadAsPStruct(const string& ptrType)
 
 	return Struct;
 }
+#pragma endregion

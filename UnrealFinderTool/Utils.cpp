@@ -10,26 +10,24 @@
 Memory* Utils::MemoryObj = nullptr;
 MySettings Utils::Settings;
 
-bool Utils::LoadJsonCore()
+bool Utils::LoadEngineCore()
 {
-	// Read core GNames
-	if (!JsonReflector::ReadAndLoadFile("Config\\Core\\GNames.json"))
+	// Get all engine files and load it's structs
+	if (!JsonReflector::ReadAndLoadFile("Config\\EngineCore\\EngineBase.json"))
 	{
-		MessageBox(nullptr, "Can't read GNames file.", "Error", MB_OK);
+		MessageBox(nullptr, "Can't read EngineBase file.", "Error", MB_OK);
 		return false;
 	}
 
-	// Read core GObjects
-	if (!JsonReflector::ReadAndLoadFile("Config\\Core\\GObjects.json"))
-	{
-		MessageBox(nullptr, "Can't read GObject file.", "Error", MB_OK);
-		return false;
-	}
+	return true;
+}
 
-	// Read core CoreStructs
-	if (!JsonReflector::ReadAndLoadFile("Config\\Core\\CoreStructs.json"))
+bool Utils::OverrideLoadedEngineCore(const std::string& engineVersion)
+{
+	// Get all engine files and load it's structs
+	if (!JsonReflector::ReadAndLoadFile("Config\\EngineCore\\Engine-" + engineVersion + ".json", true))
 	{
-		MessageBox(nullptr, "Can't read CoreStructs file.", "Error", MB_OK);
+		MessageBox(nullptr, std::string("Can't read Engine-" + engineVersion + " file.").c_str(), "Error", MB_OK);
 		return false;
 	}
 
@@ -91,6 +89,12 @@ std::string Utils::ReplaceString(std::string str, const std::string& to_find, co
 	return str;
 }
 
+bool Utils::EndsWith(const std::string& value, const std::string& ending)
+{
+	if (ending.size() > value.size()) return false;
+	return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
 bool Utils::ProgramIs64()
 {
 #if _WIN64
@@ -110,20 +114,10 @@ int64_t Utils::BufToInteger64(void* buffer)
 	return *reinterpret_cast<DWORD64*>(buffer);
 }
 
-uintptr_t Utils::CharArrayToUintptr(const std::string str)
+uintptr_t Utils::CharArrayToUintptr(const std::string& str)
 {
 	if (str.empty())
 		return 0;
-
-	//try
-	//{
-	//	return std::stoull(str);
-	//}
-	//catch (std::exception const& e)
-	//{
-	//	// This could not be parsed into a number so an exception is thrown.
-	//	// atoi() would return 0, which is less helpful if it could be a valid value.
-	//}
 
 	uintptr_t retVal;
 	std::stringstream ss;
@@ -215,7 +209,7 @@ void Utils::FixPointersInJsonStruct(JsonStruct* structBase, const bool is64BitGa
 	{
 		for (auto& var : structBase->Vars)
 		{
-			if (var.second.Type == "pointer")
+			if (Utils::EndsWith(var.second.Type, "*"))
 				ReadPointer(structBase, var.first, is64BitGame);
 			else if (var.second.IsStruct)
 			{
