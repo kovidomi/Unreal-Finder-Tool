@@ -23,7 +23,7 @@ public:
 	// Check variable type is struct
 	static bool IsStructType(const std::string& typeName);
 	// Read struct form loaded json structs
-	static bool ReadStruct(const std::string& structName, JsonStruct& destStruct);
+	static JsonStruct GetStruct(const std::string& structName);
 	// Load all json structs inside `StructsList`
 	static bool Load(void* jsonObj, bool overrideOld = false);
 	// Load all json structs inside `StructsList`, [Using main `JsonObj`]
@@ -40,8 +40,6 @@ public:
 
 class JsonVar
 {
-	// Parent of this variable
-	JsonStruct* parent;
 public:
 	// Variable Name
 	std::string Name;
@@ -61,8 +59,6 @@ public:
 
 	// Access variable inside this variable, ONLY work if this variable is struct
 	JsonVar& operator[](const std::string& varName);
-	// Change parent of this variable, useful for init this variable if is struct
-	void SetParent(JsonStruct* parentStruct);
 	// Read variable as struct, ONLY work if this variable is struct [NOT POINTER TO STRUCT]
 	JsonStruct* ReadAsStruct();
 	// Read variable as [derived] struct, ONLY work if this variable is struct [NOT POINTER TO STRUCT]
@@ -90,18 +86,12 @@ public:
 	// Variables inside this struct
 	JsonVariables Vars;
 	// Size of this struct
-	size_t StructSize = 0;
-	// If this variable is struct, this var check if it's pointer or local struct
-	bool IsPointerStruct = false;
+	int StructSize = 0;
 
-	// Check is initialized or not
-	bool IsInit();
 	// Get size must sub from struct size, useful for 32bit games in 64bit version of this tool
 	int SubUnNeededSize();
 	// Access to variable inside this struct
 	JsonVar& operator[](const std::string& varName);
 	// Access to variable inside this struct
 	JsonVar& GetVar(const std::string& varName);
-	// Initialize the struct (alloc and init variables), Don't use for temp struct or not allocated struct
-	void Init(const std::string& structName);
 };

@@ -21,21 +21,13 @@ bool JsonReflector::ReadJsonFile(const std::string& fileName)
 	return ReadJsonFile(fileName, &JsonObj);
 }
 
-bool JsonReflector::ReadStruct(const std::string& structName, JsonStruct& destStruct)
+JsonStruct JsonReflector::GetStruct(const std::string& structName)
 {
 	auto s = StructsList.find(structName);
 	if (s != StructsList.end())
-	{
-		// Get Copy From StructsList and Fill Struct
-		destStruct = s->second;
+		return s->second;
 
-		destStruct.Vars = JsonVariables(s->second.Vars.begin(), s->second.Vars.end());
-		for (auto& kv : destStruct.Vars)
-			kv.second.SetParent(&destStruct);
-
-		return true;
-	}
-	return false;
+	throw std::exception(("Can't find " + structName + " in loaded structs.").c_str());
 }
 
 bool JsonReflector::LoadStruct(const std::string& structName, const bool overrideOld)
@@ -324,11 +316,6 @@ bool JsonReflector::IsStructType(const std::string& typeName)
 #pragma endregion
 
 #pragma region JsonStruct
-bool JsonStruct::IsInit()
-{
-	return _init;
-}
-
 int JsonStruct::SubUnNeededSize()
 {
 	int sSub = 0;
@@ -365,20 +352,10 @@ JsonVar& JsonStruct::GetVar(const std::string& varName)
 
 	throw std::exception(("Not found " + varName + " in JsonVariables").c_str());
 }
-
-void JsonStruct::Init(const std::string& structName)
-{
-	if (_init || structName.empty()) return;
-
-	if (!JsonReflector::ReadStruct(structName, *this))
-		throw std::exception(("Can't find struct `" + structName + "`.").c_str());
-
-	_init = true;
-}
 #pragma endregion
 
 #pragma region JsonVar
-JsonVar::JsonVar(const std::string& name, const std::string& type, const int offset, const bool isStruct) : parent(nullptr), Struct(nullptr)
+JsonVar::JsonVar(const std::string& name, const std::string& type, const int offset, const bool isStruct) : Struct(nullptr)
 {
 	Name = name;
 	Type = type;
@@ -418,11 +395,6 @@ JsonVar& JsonVar::GetVar(const std::string& varName)
 	throw std::exception(("Not found " + varName + " in JsonVariables").c_str());
 }
 
-void JsonVar::SetParent(JsonStruct* parentStruct)
-{
-	parent = parentStruct;
-}
-
 JsonStruct* JsonVar::ReadAsStruct()
 {
 	if (!IsStruct)
@@ -436,9 +408,6 @@ JsonStruct* JsonVar::ReadAsStruct()
 		throw std::exception(("Can't find struct When try read as " + Type).c_str());
 
 	Struct = new JsonStruct(sStructIt->second);
-	Struct->Init(Type);
-	Struct->IsPointerStruct = false;
-
 	return Struct;
 }
 #pragma endregion

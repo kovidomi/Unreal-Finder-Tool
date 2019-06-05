@@ -255,6 +255,9 @@ public:
 
 class UObject
 {
+protected:
+	Memory* m = Utils::MemoryObj;
+
 public:
 	uintptr_t ObjAddress = 0;
 
@@ -272,6 +275,27 @@ public:
 			OFFSET(Class),
 			OFFSET(Outer),
 		});
+	}
+
+	int ReadData()
+	{
+		if (ObjAddress == NULL)
+			throw std::exception("ObjAddress cant be zero !!");
+
+		static JsonStruct jStruct = JsonReflector::GetStruct("UObject");
+
+		// Read this struct
+		m->Read(ObjAddress + jStruct["VfTable"].Offset, VfTable);
+		m->Read(ObjAddress + jStruct["Flags"].Offset, Flags);
+		m->Read(ObjAddress + jStruct["InternalIndex"].Offset, InternalIndex);
+		m->Read(ObjAddress + jStruct["Class"].Offset, Class);
+		m->Read(ObjAddress + jStruct["Name"].Offset, Name);
+		m->Read(ObjAddress + jStruct["Outer"].Offset, Outer);
+
+		// Fix pointer for x32 tool version
+		FixPointers(jStruct.StructSize);
+
+		return jStruct.StructSize;
 	}
 
 	void operator=(JsonStruct& uObject)
@@ -307,8 +331,7 @@ public:
 		if (Utils::MemoryObj != nullptr)
 		{
 			castType.ObjAddress = ObjAddress;
-			Utils::MemoryObj->Read<USdkStruct>(ObjAddress, castType, sizeof(uintptr_t)); // Skip ObjAddress in UObject
-			castType.FixPointers(sizeof USdkStruct);
+			castType.ReadData();
 		}
 
 		return castType;
@@ -325,6 +348,21 @@ public:
 		UObject::FixPointers(fullStructSize);
 		Utils::FixPointers(this, fullStructSize, { OFFSET(Next) });
 	}
+
+	int ReadData()
+	{
+		// Read super first
+		int lastOff = UObject::ReadData();
+
+		// Read this struct
+		static JsonStruct jStruct = JsonReflector::GetStruct("UField");
+		m->Read(ObjAddress + lastOff + jStruct["Next"].Offset, Next);
+
+		// Fix pointer for x32 tool version
+		FixPointers(jStruct.StructSize);
+
+		return lastOff + jStruct.StructSize;
+	}
 };
 
 class UEnum : public UField
@@ -332,13 +370,29 @@ class UEnum : public UField
 public:
 	FString CppType;
 	TUEnumArray Names; /*TArray<TPair<FName, uint64_t>> */
-	__int64 CppForm = 0;
+	int64_t CppForm = 0;
 
 	void FixPointers(const int fullStructSize)
 	{
 		UField::FixPointers(fullStructSize);
 		CppType.FixPointers(this, OFFSET(CppType), fullStructSize);
 		Names.FixPointers(this, OFFSET(Names), fullStructSize);
+	}
+
+	int ReadData()
+	{
+		// Read super first
+		int lastOff = UField::ReadData();
+
+		// Read this struct
+		static JsonStruct jStruct = JsonReflector::GetStruct("UField");
+		m->Read(ObjAddress + lastOff + jStruct["Next"].Of fset, Next);
+
+		// Fix pointer for x32 tool version
+		FixPointers(jStruct.StructSize);
+
+		// Return next var offset
+		return lastOff + jStruct.StructSize;
 	}
 };
 
