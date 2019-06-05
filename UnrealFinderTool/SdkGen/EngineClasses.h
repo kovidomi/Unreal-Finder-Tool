@@ -303,6 +303,7 @@ public:
 		// it's like internal cast, but for remote process
 		USdkStruct castType;
 
+		// it's just to solve start up problem, for really Utils::MemoryObj will never == nullptr
 		if (Utils::MemoryObj != nullptr)
 		{
 			castType.ObjAddress = ObjAddress;
